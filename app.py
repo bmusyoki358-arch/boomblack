@@ -14,12 +14,14 @@ def progress_hook(d):
         download_status['status'] = 'downloading'
         download_status['percent'] = d.get('_percent_str','0%').strip()
         download_status['speed'] = d.get('_speed_str','')
-        download_status['title'] = str(d.get('info_dict',{}).get('title',''))[:60]
+        try:
+            download_status['title'] = str(d.get('info_dict',{}).get('title',''))[:60]
+        except: pass
     elif d['status'] == 'finished':
         download_status['status']='finished'
         download_status['percent']='100%'
 
-HTML = """<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>BOOM BLACK</title><style>body{background:#000;color:#fff;text-align:center;font-family:Arial;padding:15px}input{width:70%;padding:14px;border-radius:12px;border:none}button{padding:14px 20px;background:red;color:#fff;border:none;border-radius:12px;font-weight:bold}#progressBox{display:none;background:#111;border:1px solid #333;padding:15px;border-radius:12px;margin:15px auto;max-width:500px}#barBg{width:100%;background:#333;height:22px;border-radius:10px;overflow:hidden}#bar{width:0%;height:100%;background:linear-gradient(90deg,red,orange);transition:width 0.3s}.video{background:#111;margin:12px auto;padding:10px;border-radius:12px;max-width:400px}video{width:100%;border-radius:8px}</style></head><body><h1>BOOM BLACK V5</h1><form method="POST" onsubmit="startPoll()"><input name="url" placeholder="Paste YouTube link" required><button>DOWNLOAD</button></form><div id="progressBox"><h3 id="titleText">Downloading...</h3><div id="barBg"><div id="bar"></div></div><p id="percentText">0%</p><p id="speedText"></p></div><p style="color:#0f0">{{ msg }}</p><hr><h2>Gallery</h2>{% for f in files %}<div class="video">{{ f }}<br><video controls><source src="/downloads/{{ f }}"></video><br><a href="/downloads/{{ f }}" download style="color:red">⬇ Download</a></div>{% endfor %}<script>let polling;function startPoll(){document.getElementById('progressBox').style.display='block';polling=setInterval(async()=>{let r=await fetch('/status');let j=await r.json();document.getElementById('percentText').innerText=j.percent+' - '+j.speed;document.getElementById('titleText').innerText=j.title||'Downloading...';let p=parseFloat(j.percent)||0;document.getElementById('bar').style.width=p+'%';if(j.status=='finished'){clearInterval(polling);document.getElementById('titleText').innerText='✅ Done!';}},500);}</script></body></html>"""
+HTML = """<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>BOOM BLACK</title><style>body{background:#000;color:#fff;text-align:center;font-family:Arial;padding:15px}input{width:70%;padding:14px;border-radius:12px;border:none}button{padding:14px 20px;background:red;color:#fff;border:none;border-radius:12px;font-weight:bold}#progressBox{display:none;background:#111;border:1px solid #333;padding:15px;border-radius:12px;margin:15px auto;max-width:500px}#barBg{width:100%;background:#333;height:22px;border-radius:10px;overflow:hidden}#bar{width:0%;height:100%;background:linear-gradient(90deg,red,orange);transition:width 0.3s}.video{background:#111;margin:12px auto;padding:10px;border-radius:12px;max-width:400px}video{width:100%;border-radius:8px}</style></head><body><h1>BOOM BLACK V6 - Format Fixed</h1><form method="POST" onsubmit="startPoll()"><input name="url" placeholder="Paste YouTube link" required><button>DOWNLOAD</button></form><div id="progressBox"><h3 id="titleText">Downloading...</h3><div id="barBg"><div id="bar"></div></div><p id="percentText">0%</p><p id="speedText"></p></div><p style="color:#0f0">{{ msg }}</p><hr><h2>Gallery</h2>{% for f in files %}<div class="video">{{ f }}<br><video controls><source src="/downloads/{{ f }}"></video><br><a href="/downloads/{{ f }}" download style="color:red">⬇ Download</a></div>{% endfor %}<script>let polling;function startPoll(){document.getElementById('progressBox').style.display='block';polling=setInterval(async()=>{let r=await fetch('/status');let j=await r.json();document.getElementById('percentText').innerText=j.percent+' - '+j.speed;document.getElementById('titleText').innerText=j.title||'Downloading...';let p=parseFloat(j.percent)||0;document.getElementById('bar').style.width=p+'%';if(j.status=='finished'){clearInterval(polling);document.getElementById('titleText').innerText='✅ Done!';}},500);}</script></body></html>"""
 
 @app.route("/", methods=["GET","POST"])
 def home():
@@ -34,7 +36,11 @@ def home():
                 'cookiefile': 'cookies.txt' if os.path.exists('cookies.txt') else None,
                 'noplaylist': True,
                 'progress_hooks': [progress_hook],
-                'extractor_args': {'youtube': {'player_client': ['android','web']}},
+                'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+                'merge_output_format': 'mp4',
+                'extractor_args': {'youtube': {'player_client': ['android','web','ios']}},
+                'nocheckcertificate': True,
+                'geo_bypass': True,
                 'quiet': False,
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
