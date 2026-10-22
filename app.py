@@ -6,7 +6,6 @@ app = Flask(__name__)
 DOWNLOAD_FOLDER = "downloads"
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 
-# Global status for % bar
 download_status = {"status": "idle", "percent": "0%", "speed": "", "title": ""}
 
 def progress_hook(d):
@@ -15,11 +14,13 @@ def progress_hook(d):
         download_status['status'] = 'downloading'
         download_status['percent'] = d.get('_percent_str', '0%').strip()
         download_status['speed'] = d.get('_speed_str', '')
-        download_status['title'] = d.get('info_dict', {}).get('title', '')[:40]
+        try:
+            download_status['title'] = d.get('info_dict', {}).get('title', '')[:50]
+        except:
+            pass
     elif d['status'] == 'finished':
         download_status['status'] = 'finished'
         download_status['percent'] = '100%'
-        download_status['speed'] = 'Done'
 
 HTML = """
 <!DOCTYPE html>
@@ -29,20 +30,19 @@ HTML = """
 <title>BOOM BLACK 🔥</title>
 <style>
 body{background:#000;color:#fff;text-align:center;font-family:Arial;padding:15px}
-input{width:75%;padding:14px;border-radius:12px;border:none;font-size:16px}
-button{padding:14px 25px;background:#ff0000;color:#fff;border:none;border-radius:12px;font-weight:bold;margin-left:5px}
+input{width:70%;padding:14px;border-radius:12px;border:none}
+button{padding:14px 20px;background:red;color:#fff;border:none;border-radius:12px;font-weight:bold}
 #progressBox{display:none;background:#111;border:1px solid #333;padding:15px;border-radius:12px;margin:15px auto;max-width:500px}
 #barBg{width:100%;background:#333;height:22px;border-radius:10px;overflow:hidden}
 #bar{width:0%;height:100%;background:linear-gradient(90deg, red, orange);transition:width 0.3s}
 .video{background:#111;margin:12px auto;padding:10px;border-radius:12px;max-width:400px}
 video{width:100%;border-radius:8px}
-.msg{color:#0f0;margin:10px}
 </style>
 </head>
 <body>
 <h1>BOOM BLACK 🔥 V4</h1>
 <form method="POST" onsubmit="startPoll()">
-<input name="url" id="urlInput" placeholder="Paste YouTube link here" required>
+<input name="url" placeholder="Paste YouTube link" required>
 <button>DOWNLOAD</button>
 </form>
 
@@ -52,13 +52,13 @@ video{width:100%;border-radius:8px}
 <p id="percentText">0%</p><p id="speedText"></p>
 </div>
 
-<p class="msg">{{ msg }}</p>
+<p style="color:#0f0">{{ msg }}</p>
 <hr>
 <h2>Your Downloads Gallery</h2>
 {% for f in files %}
 <div class="video">{{ f }}<br>
 <video controls><source src="/downloads/{{ f }}"></video><br>
-<a href="/downloads/{{ f }}" download style="color:red">⬇ Download File</a>
+<a href="/downloads/{{ f }}" download style="color:red">⬇ Download</a>
 </div>
 {% endfor %}
 
@@ -73,8 +73,8 @@ function startPoll(){
   document.getElementById('titleText').innerText = j.title || 'Downloading...';
   let p = parseFloat(j.percent) || 0;
   document.getElementById('bar').style.width = p + '%';
-  if(j.status=='finished'){ clearInterval(polling); document.getElementById('titleText').innerText='✅ Finished! Reload page'; }
- }, 600);
+  if(j.status=='finished'){ clearInterval(polling); document.getElementById('titleText').innerText='✅ Done!'; }
+ }, 500);
 }
 </script>
 </body>
@@ -91,8 +91,7 @@ def home():
         try:
             ydl_opts={
                 'outtmpl': f'{DOWNLOAD_FOLDER}/%(title)s.%(ext)s',
-                'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestaudio/best',
-                'merge_output_format': 'mp4',
+                'format': 'best',
                 'noplaylist': True,
                 'progress_hooks': [progress_hook],
                 'cookiefile': 'cookies.txt' if os.path.exists('cookies.txt') else None,
@@ -102,11 +101,12 @@ def home():
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
-            msg="✅ Downloaded! Scroll down to gallery"
+            msg="✅ Downloaded! Check gallery below"
             download_status['status']='finished'
+            download_status['percent']='100%'
         except Exception as e:
             msg=f"❌ Error: {e}"
-            download_status={'status':'error','percent':'0%','speed':str(e),'title':'Error'}
+            download_status={'status':'error','percent':'0%','speed':str(e)[:100],'title':'Error'}
     files=sorted(os.listdir(DOWNLOAD_FOLDER), reverse=True) if os.path.exists(DOWNLOAD_FOLDER) else []
     return render_template_string(HTML, msg=msg, files=files)
 
